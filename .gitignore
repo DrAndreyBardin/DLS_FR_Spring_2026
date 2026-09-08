@@ -1,0 +1,57 @@
+# ==========================================
+# DLS Face Recognition — Spring 2026
+# ==========================================
+
+# ---- macOS / archive metadata ----
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+__MACOSX/
+
+# ---- Jupyter / Python ----
+.ipynb_checkpoints/
+__pycache__/
+*.py[cod]
+
+# ---- Local Python environments ----
+.venv/
+venv/
+env/
+conda-env/
+dlsfr/
+
+# ---- IDE / temporary files ----
+.vscode/
+.idea/
+*.tmp
+*.temp
+*.log
+
+# ---- Model checkpoints / trained weights ----
+*.pt
+*.pth
+*.ckpt
+
+# NOTE:
+# Do NOT ignore *.onnx globally.
+# The YuNet ONNX model is intentionally retained in the repository.
+
+# ---- Local CelebA-derived image datasets ----
+dataset/**/*.jpg
+dataset/**/*.jpeg
+dataset/**/*.png
+
+# Keep one explicit naming/layout example in the public repository.
+!dataset/3.celeba_21k_aligned/0000968__022456.jpg
+
+# ---- Dataset archives ----
+dataset/**/*.zip
+dataset/**/*.tar
+dataset/**/*.tar.gz
+dataset/**/*.tgz
+dataset/**/*.gz
+
+# ---- Optional local training-service output ----
+wandb/
+runs/

@@ -1,0 +1,11 @@
+{
+  "total_images": 40000,
+  "total_identities": 9402,
+  "train_images": 36000,
+  "validation_images": 4000,
+  "train_identities": 8466,
+  "validation_identities": 936,
+  "identity_overlap": 0,
+  "validation_fraction": 0.1,
+  "random_seed": 42
+}

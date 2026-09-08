@@ -1,0 +1,12 @@
+{
+  "split": "train",
+  "images": 36000,
+  "identities": 8466,
+  "min_images_per_identity": 1,
+  "max_images_per_identity": 8,
+  "mean_images_per_identity": 4.252303330970943,
+  "images_directory": "images",
+  "annotations_file": "annotations.csv",
+  "created_files": 36000,
+  "already_present": 0
+}

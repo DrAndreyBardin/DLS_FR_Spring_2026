@@ -1,0 +1,2 @@
+epoch,margin,sameid_val_arcface_loss,raw_sameid_val_acc,margin_sameid_val_acc,test_retrieval_rank1,test_retrieval_retrieval_error,test_retrieval_cosine_mean_gap
+5,0.0,2.0587016795253827,0.5598194130925508,0.5598194130925508,0.22330827067669173,0.7766917293233082,0.18456223607063293

@@ -1,0 +1,26 @@
+{
+  "status": "completed_notebook_execution",
+  "stage": "P2_two_stack_hourglass",
+  "versions": {
+    "master_manifest": "0.1",
+    "project_manifest": "Stage 2",
+    "developer_spec": "2.0",
+    "notebook": "0.1"
+  },
+  "train_samples": 36000,
+  "val_samples": 4000,
+  "parameter_count": 6545098,
+  "device": "cuda",
+  "best_stack2_nme": 0.029255708679556847,
+  "best_total_val_loss": 0.00015065621939720585,
+  "stage1_single_best_nme_reference": 0.030112765729427338,
+  "stage1_minus_stage2_nme": 0.000857057049870491,
+  "known_limitations_to_review": [
+    "Argmax decoding is quantized to the 64 x 64 heatmap grid.",
+    "Heatmap sigma and augmentation strength remain Stage 1 baseline choices.",
+    "Small source crops may remain information-limited after upsampling.",
+    "Constant border padding is retained because reflect padding duplicated keypoints in Stage 1 diagnostics.",
+    "Whether Stack 2 consistently refines Stack 1 must be judged from the measured validation history and overlays.",
+    "A formal Single-vs-Double controlled comparison belongs to Stage P3."
+  ]
+}

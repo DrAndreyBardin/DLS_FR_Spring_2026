@@ -1,0 +1,33 @@
+{
+  "raw_manifest_images": 202598,
+  "raw_identities": 10177,
+  "candidate_images": 42254,
+  "processing_status": {
+    "ok": 42192,
+    "bbox_fail": 42,
+    "landmarks_fail": 20
+  },
+  "final_counts": {
+    "train": 16000,
+    "test_distractor": 2000,
+    "validation": 2000,
+    "test_query": 1000
+  },
+  "final_identity_counts": {
+    "train": 2087,
+    "validation": 500,
+    "test_query": 250,
+    "test_distractor": 2000
+  },
+  "identity_overlap_checks": {
+    "train__validation": 0,
+    "train__test_query": 0,
+    "train__test_distractor": 0,
+    "validation__test_query": 0,
+    "validation__test_distractor": 0,
+    "test_query__test_distractor": 0
+  },
+  "query_positive_pairs": 1500,
+  "query_negative_pairs": 498000,
+  "query_distractor_pairs": 2000000
+}

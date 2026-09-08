@@ -1,0 +1,2 @@
+selected_epoch,query_images,query_identities,distractor_images,distractor_identities,rank1_query_probe,roc_auc,eer,eer_threshold,genuine_pairs,impostor_pairs,genuine_cos_mean,genuine_cos_std,impostor_cos_mean,impostor_cos_std,cosine_mean_gap
+20,940,235,1872,1872,0.41914893617021276,0.9528344584652142,0.11631215959706484,0.5124071836471558,1410,3950856,0.6714129447937012,0.12243787944316864,0.40927305817604065,0.08425459265708923,0.2621398866176605

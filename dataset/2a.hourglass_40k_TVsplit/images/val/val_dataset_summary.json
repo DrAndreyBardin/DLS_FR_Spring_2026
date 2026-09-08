@@ -1,0 +1,12 @@
+{
+  "split": "val",
+  "images": 4000,
+  "identities": 936,
+  "min_images_per_identity": 1,
+  "max_images_per_identity": 8,
+  "mean_images_per_identity": 4.273504273504273,
+  "images_directory": "images",
+  "annotations_file": "annotations.csv",
+  "created_files": 4000,
+  "already_present": 0
+}

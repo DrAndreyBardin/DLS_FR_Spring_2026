@@ -1,0 +1,25 @@
+{
+  "protocol": "DLS Identification Rate / verification-style TPR@FPR",
+  "evaluation_mode": "spring_only_final",
+  "dataset": {
+    "query_images": 940,
+    "query_identities": 235,
+    "distractor_images": 1872,
+    "distractor_identities": 1872,
+    "genuine_pairs": 1410,
+    "impostor_pairs": 2199600,
+    "minimum_empirical_fpr_step": 4.546281142025823e-07
+  },
+  "models": {
+    "CE": {
+      "checkpoint": "/Users/baal/Yandex.Disk.localized/WORK/PROg/DLS/DLS.2026.1.0весна/24-10_FinalProject/Pipeline_stage/B3/notebooks/4a-CE/best.CE.pt",
+      "roc_auc": 0.9526704971503523
+    },
+    "ArcFace": {
+      "checkpoint": "/Users/baal/Yandex.Disk.localized/WORK/PROg/DLS/DLS.2026.1.0весна/24-10_FinalProject/Pipeline_stage/B3/notebooks/4b-ArcFace/best.ArcFace.pt",
+      "roc_auc": 0.9302889077833623
+    }
+  },
+  "conclusion": "CE has higher TPR at every evaluated matched-FPR operating point.",
+  "warning": "This is not a universal CE-vs-ArcFace claim. Compare models at matched FPR."
+}

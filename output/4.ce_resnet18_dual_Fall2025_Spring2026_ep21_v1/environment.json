@@ -1,0 +1,7 @@
+{
+  "python": "3.13.5",
+  "torch": "2.9.1",
+  "torchvision": "0.24.1",
+  "device": "mps",
+  "platform": "macOS-15.7.7-arm64-arm-64bit-Mach-O"
+}

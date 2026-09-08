@@ -1,0 +1,29 @@
+{
+  "seed": 42,
+  "source": "legacy Fall 2025 ImageFolder export",
+  "train_images": 13271,
+  "validation_images": 1329,
+  "test_images": 1330,
+  "num_identities": 666,
+  "identity_sets_equal_train_val_test": true,
+  "virtual_train_holdout_used": false,
+  "source_files_modified_or_copied": false,
+  "train_images_per_identity": {
+    "min": 16,
+    "median": 20.0,
+    "mean": 19.926426426426428,
+    "max": 20
+  },
+  "val_images_per_identity": {
+    "min": 1,
+    "median": 2.0,
+    "mean": 1.9954954954954955,
+    "max": 2
+  },
+  "test_images_per_identity": {
+    "min": 1,
+    "median": 2.0,
+    "mean": 1.996996996996997,
+    "max": 2
+  }
+}

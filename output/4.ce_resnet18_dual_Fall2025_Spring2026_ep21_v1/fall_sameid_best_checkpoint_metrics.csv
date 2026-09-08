@@ -1,0 +1,2 @@
+selected_epoch,fall_val_ce_loss,fall_val_accuracy,dls_accuracy_threshold,dls_threshold_passed,fall_test_ce_loss,fall_test_accuracy
+20,1.0604280359858045,0.7705041384499624,0.7,True,1.0902732744252772,0.7706766917293233
