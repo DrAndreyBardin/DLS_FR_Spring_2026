@@ -1,12 +1,11 @@
-	# DLS Face Recognition --- Spring 2026
+# DLS Face Recognition — Spring 2026
 
-**Финальный проект Deep Learning School --- Face Recognition, Spring
-2026**\
+**Финальный проект Deep Learning School — Face Recognition, Spring 2026**\
 **Автор:** Andrei Bardin (Бардин Андрей)\
 **Framework:** PyTorch\
 **Основной dataset:** CelebA in the Wild
 
-> Spring 2026 --- новая реализация face-recognition pipeline,
+> Spring 2026 — новая реализация face-recognition pipeline,
 > развивающая идеи проекта Fall 2025.\
 > Главные изменения: собственный modular front end
 > `YuNet → Double Hourglass → 5-point alignment`, разделение training и
@@ -86,42 +85,18 @@ Fall pipeline уже содержал полноценные recognition experim
 
 ### Что принципиально изменено в Spring 2026
 
-  -----------------------------------------------------------------------
-  Компонент               Fall 2025               Spring 2026
-  ----------------------- ----------------------- -----------------------
-  Реализация              предыдущий pipeline     новый pipeline собран
-                                                  заново
-
-  Face front end          pretrained integrated   YuNet + Double
-                          preprocessing           Hourglass + explicit
-                                                  alignment
-
-  Landmark model          не самостоятельная      Double 2-stack
-                          обучаемая стадия        Hourglass, 5 landmarks
-                          проекта                 
-
-  Input                   в основном              CelebA Wild и arbitrary
-                          подготовленные CelebA   images
-                          faces                   
-
-  CE / ArcFace            реализованы             сохранены как основные
-                                                  recognition branches
-
-  Triplet                 реализован              сознательно не
-                                                  повторяется
-
-  ArcFace + Triplet       реализован              сознательно не
-                                                  повторяется
-
-  Training protocol       same-identity split     same-identity split для
-                                                  CE / ArcFace training
-
-  Final verification      identities не были      frozen unseen-identity
-                          достаточно отделены от  Spring benchmark
-                          training population     
-
-  Final metrics           предыдущий protocol     ROC-AUC, EER, TPR@FPR
-  -----------------------------------------------------------------------
+| Компонент | Fall 2025 | Spring 2026 |
+|---|---|---|
+| Реализация | предыдущий pipeline | новый pipeline собран заново |
+| Face front end | pretrained integrated preprocessing | YuNet + Double Hourglass + explicit alignment |
+| Landmark model | не самостоятельная обучаемая стадия проекта | Double 2-stack Hourglass, 5 landmarks |
+| Input | в основном подготовленные CelebA faces | CelebA Wild и arbitrary images |
+| CE / ArcFace | реализованы | сохранены как основные recognition branches |
+| Triplet | реализован | сознательно не повторяется |
+| ArcFace + Triplet | реализован | сознательно не повторяется |
+| Training protocol | same-identity split | same-identity split для CE / ArcFace training |
+| Final verification | identities не были достаточно отделены от training population | frozen unseen-identity Spring benchmark |
+| Final metrics | предыдущий protocol | ROC-AUC, EER, TPR@FPR |
 
 Самое существенное методологическое изменение --- не новый loss, а
 **разделение задачи обучения classifier и задачи проверки generalization
@@ -337,10 +312,14 @@ Recognition branch:
 
 Canonical downstream checkpoint --- исходный `best.pt` (epoch 5).
 
-Отдельно был заранее выбран full-margin epoch-15 reference checkpoint.
-Несмотря на более высокую same-identity classification accuracy, он
-оказался хуже `best.pt` на downstream unseen-identity verification.
-Поэтому epoch 15 не заменяет canonical checkpoint.
+Отдельно был проверен заранее определённый full-margin epoch-15 reference
+checkpoint как post-hoc control. Несмотря на более высокую same-identity
+classification accuracy, его downstream verification quality оказалась
+хуже canonical `best.pt`.
+
+Этот control experiment не использовался для дальнейшего перебора
+checkpoints: исходный `best.pt` был сохранён как canonical model, а
+epoch 15 остался документированным branch point.
 
 Это важный практический результат: classification accuracy и ArcFace
 training loss не следует автоматически интерпретировать как оптимальный
@@ -398,22 +377,22 @@ normalization, cosine similarity и pair definitions.
 
 ### Summary
 
-  Metric      Cross-Entropy    ArcFace
-  --------- --------------- ----------
-  ROC-AUC      **0.952670**   0.930289
-  EER          **0.116379**   0.145390
+| Metric | Cross-Entropy | ArcFace |
+|---|---:|---:|
+| ROC-AUC | **0.952670** | 0.930289 |
+| EER | **0.116379** | 0.145390 |
 
 ### TPR at fixed FPR
 
-       FPR   Cross-Entropy    ArcFace
-  -------- --------------- ----------
-       0.5    **0.984397**   0.975177
-       0.2    **0.929078**   0.902128
-       0.1    **0.867376**   0.788652
-      0.05    **0.797163**   0.682270
-      0.01    **0.589362**   0.438298
-     0.001    **0.299291**   0.192908
-    0.0001    **0.127660**   0.071631
+| FPR | Cross-Entropy | ArcFace |
+|---:|---:|---:|
+| 0.5 | **0.984397** | 0.975177 |
+| 0.2 | **0.929078** | 0.902128 |
+| 0.1 | **0.867376** | 0.788652 |
+| 0.05 | **0.797163** | 0.682270 |
+| 0.01 | **0.589362** | 0.438298 |
+| 0.001 | **0.299291** | 0.192908 |
+| 0.0001 | **0.127660** | 0.071631 |
 
 В данном frozen experiment CE checkpoint превосходит canonical ArcFace
 checkpoint.
@@ -457,6 +436,8 @@ datasets не дублируются в Git.
 ``` text
 DLS_FR_Spring_2026/
 ├── README.md
+├── pipeline_dataflow.png
+├── .gitignore
 ├── notebooks/
 │   ├── 1.YuNet_BBox_Diagnostic_CelebA_Wild_v0_1__all.ipynb
 │   ├── 2.Double_2-stack_Hourglass_CelebA_5_Landmarks_v0_1.ipynb
@@ -500,16 +481,18 @@ history.
 -   один небольшой naming example там, где это полезно;
 -   notebooks, позволяющие воспроизвести preprocessing.
 
-Canonical trained checkpoints также не помещаются непосредственно в Git.
-Для них предусмотрено внешнее хранение и единый registry:
+Canonical trained checkpoints не хранятся непосредственно в Git history.
+Они опубликованы в GitHub Release
+[`v1.0.0`](https://github.com/DrAndreyBardin/DLS_FR_Spring_2026/releases/tag/v1.0.0).
 
-`external_assets/manifest.csv`
+`external_assets/manifest.csv` является authoritative registry для
+release-asset URLs, SHA-256 checksums и distribution status.
 
 Canonical checkpoints:
 
-1.  Double 2-stack Hourglass;
-2.  Cross-Entropy ResNet18;
-3.  ArcFace ResNet18.
+1. Double 2-stack Hourglass — `double_hourglass_2stack_best.pt`;
+2. Cross-Entropy ResNet18 — `ce_resnet18_best.pt`;
+3. ArcFace ResNet18 — `arcface_resnet18_best.pt`.
 
 Таким образом, Git repository содержит reproducibility record, а не
 копию всех локальных intermediate data.
@@ -570,7 +553,8 @@ experiments.
 
 Потому что downstream verification на frozen unseen identities оказался
 лучше для исходного `best.pt`. Epoch 15 был проверен как predefined
-control и не заменил canonical checkpoint.
+post-hoc control; дальнейший перебор checkpoints по frozen benchmark не
+проводился, и canonical checkpoint не менялся.
 
 ### Почему CE оказался лучше ArcFace?
 
@@ -622,12 +606,13 @@ Hourglass training dataset, same-identity recognition training contract
 
 ## 12. Status
 
-**Spring 2026 v1.0 --- publication candidate.**
+**Spring 2026 v1.0 — final publication candidate.**
 
 Текущий repository содержит final notebooks, selected experiment
-artifacts и reproducibility metadata. Canonical model checkpoints
-публикуются отдельно как external assets.
+artifacts и reproducibility metadata. Canonical model checkpoints уже
+опубликованы в GitHub Release `v1.0.0`.
 
-Дальнейшие изменения, если они понадобятся, рассматриваются как
-последующие revisions, а не как условие завершения первой публичной
-версии.
+После финального repository audit текущая revision предназначена для
+перевода в Public без дополнительных experimental changes. Дальнейшие
+изменения, если они понадобятся, рассматриваются как последующие
+revisions, а не как условие завершения первой публичной версии.
