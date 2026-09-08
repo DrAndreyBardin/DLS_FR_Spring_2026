@@ -11,7 +11,7 @@ The source inventory is the repository-pruning report supplied during finalizati
 
 ## Canonical public checkpoints
 
-The following three files are planned for GitHub Release `v1.0.0`:
+The following three canonical checkpoints are published in GitHub Release [`v1.0.0`](https://github.com/DrAndreyBardin/DLS_FR_Spring_2026/releases/tag/v1.0.0):
 
 | Asset | Release filename | Source filename | Size | SHA-256 |
 |---|---|---|---:|---|
@@ -19,7 +19,7 @@ The following three files are planned for GitHub Release `v1.0.0`:
 | Cross-Entropy ResNet18 | `ce_resnet18_best.pt` | `best.pt` | 44 MB | `6f9d679d49ad4df299c0aa5f2c091ee8d7d6635e5e03e975e2b7217bab7235ec` |
 | ArcFace ResNet18 | `arcface_resnet18_best.pt` | `best.pt` | 44 MB | `dea25ee62641011ef560d508aac8ccbca573b91739776d3b508ad05a26c2d1e0` |
 
-The `url` fields in `manifest.csv` are intentionally empty until the GitHub Release exists. After upload, those fields should be filled with the real release-asset URLs. No placeholder URLs are required.
+The corresponding direct release-asset URLs are recorded in `manifest.csv`, which remains the authoritative registry for externally distributed assets.
 
 ## Notes
 
