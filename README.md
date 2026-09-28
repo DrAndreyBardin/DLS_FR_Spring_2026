@@ -1,30 +1,27 @@
-# DLS Face Recognition — Spring 2026
+# Face Recognition Pipeline — CelebA in the Wild
 
-**Финальный проект Deep Learning School — Face Recognition, Spring 2026**\
-**Автор:** Andrei Bardin (Бардин Андрей)\
-**Framework:** PyTorch\
-**Основной dataset:** CelebA in the Wild
+**Author:** Andrei Bardin  
+**Framework:** PyTorch  
+**Primary dataset:** CelebA in the Wild
 
-> Spring 2026 — новая реализация face-recognition pipeline,
-> развивающая идеи проекта Fall 2025.\
-> Главные изменения: собственный modular front end
-> `YuNet → Double Hourglass → 5-point alignment`, разделение training и
-> final verification dataset contracts и корректная оценка
-> unseen-identity verification через ROC / EER / TPR@FPR.
+> An end-to-end face-recognition pipeline built as a modular research and engineering project.
+> The system explicitly separates face detection, landmark localization, geometric alignment,
+> representation learning, and verification. Its final evaluation uses identities excluded
+> from the recognition-model training population.
 
-------------------------------------------------------------------------
-![DLS Face Recognition Spring 2026 — полный поток данных](pipeline_dataflow.png)
+---
 
-## 1. Что это за проект
+![Face Recognition Pipeline — complete data flow](pipeline_dataflow.png)
 
-Цель Spring 2026 состояла не в том, чтобы ещё раз обучить classifier на
-CelebA, а в том, чтобы собрать полный и контролируемый face-recognition
-pipeline: от исходного изображения до face embedding и verification
-decision.
+## 1. Project Overview
 
-Финальная архитектура:
+The objective of this project is not merely to train a classifier on CelebA, but to construct
+and evaluate a complete, controlled face-recognition pipeline: from an unconstrained input
+image to a face embedding and a verification decision.
 
-``` text
+The final architecture is:
+
+```text
 Input image
     ↓
 YuNet face detector
@@ -50,168 +47,139 @@ Cosine similarity
 Face verification
 ```
 
-В отличие от preprocessing, скрытого внутри крупной pretrained
-face-recognition system, здесь detection, landmark localization и
-alignment являются явными стадиями с собственными contracts, diagnostics
-и artifacts.
+Rather than hiding preprocessing inside a large pretrained face-recognition system, this
+implementation treats detection, landmark localization, and alignment as explicit,
+independently testable stages with their own interfaces, diagnostics, checkpoints, and
+reproducibility artifacts.
 
-------------------------------------------------------------------------
+The project therefore addresses three distinct questions:
 
-## 2. От Fall 2025 к Spring 2026
+1. Can the recognition model learn discriminative representations for its training identity population?
+2. Can the complete front end reliably transform unconstrained images into canonical aligned faces?
+3. Do the resulting embeddings generalize to verification of identities never observed during recognition training?
 
-Spring 2026 связан с предыдущим проектом **DLS Face Recognition --- Fall
-2025**, но не является простым продолжением старых notebooks.
+---
 
-Предыдущий репозиторий:
+## 2. Experimental Design
 
-https://github.com/DrAndreyBardin/DLS_FR_2025_Fall
+The project combines two recognition branches with a custom modular front end:
 
-### Что было сделано в Fall 2025
+| Component | Implementation |
+|---|---|
+| Face detection | YuNet |
+| Landmark localization | Double 2-stack Hourglass, 5 landmarks |
+| Alignment | 5-point similarity transform |
+| Recognition backbone | ResNet18 |
+| Recognition objectives | Cross-Entropy and ArcFace |
+| Embedding | 512-D, L2-normalized |
+| Similarity | Cosine similarity |
+| Final evaluation | Identity-disjoint verification |
+| Verification metrics | ROC-AUC, EER, TPR@FPR |
 
-Fall pipeline уже содержал полноценные recognition experiments:
+Earlier experiments also included Triplet Loss and a combined ArcFace + Triplet objective.
+Those branches are not repeated here because the present work focuses on the explicit
+front end, end-to-end integration, and a stricter verification protocol.
 
--   Cross-Entropy baseline;
--   ArcFace;
--   Triplet Loss;
--   ArcFace + Triplet hybrid;
--   ResNet18 backbone;
--   512-D embeddings;
--   cosine-similarity-based recognition.
+The central methodological choice is to separate **recognition-model training** from
+**generalization testing on unseen identities**.
 
-Поэтому Spring не повторяет Triplet Loss и ArcFace + Triplet. Это не
-отказ от этих методов и не отрицательный результат: они уже были успешно
-реализованы в Fall 2025. Повторять их означало бы дублировать
-завершённую работу вместо исследования новых частей pipeline.
+---
 
-### Что принципиально изменено в Spring 2026
+## 3. Dataset Contracts
 
-| Компонент | Fall 2025 | Spring 2026 |
-|---|---|---|
-| Реализация | предыдущий pipeline | новый pipeline собран заново |
-| Face front end | pretrained integrated preprocessing | YuNet + Double Hourglass + explicit alignment |
-| Landmark model | не самостоятельная обучаемая стадия проекта | Double 2-stack Hourglass, 5 landmarks |
-| Input | в основном подготовленные CelebA faces | CelebA Wild и arbitrary images |
-| CE / ArcFace | реализованы | сохранены как основные recognition branches |
-| Triplet | реализован | сознательно не повторяется |
-| ArcFace + Triplet | реализован | сознательно не повторяется |
-| Training protocol | same-identity split | same-identity split для CE / ArcFace training |
-| Final verification | identities не были достаточно отделены от training population | frozen unseen-identity Spring benchmark |
-| Final metrics | предыдущий protocol | ROC-AUC, EER, TPR@FPR |
+A key result of the project was recognizing that classification training and identity-disjoint
+verification require different dataset contracts.
 
-Самое существенное методологическое изменение --- не новый loss, а
-**разделение задачи обучения classifier и задачи проверки generalization
-на unseen identities**.
+An identity-disjoint dataset of approximately 21,000 images was initially constructed with
+the intention of using disjoint identities across subsets. In practice, applying that contract
+directly to supervised CE / ArcFace classification did not produce the required classification
+performance. Rather than discarding the dataset, its role was redefined according to the
+statistical question it was better suited to answer.
 
-------------------------------------------------------------------------
+### 3.1 Recognition-training contract
 
-## 3. Почему понадобились два dataset contracts
+Cross-Entropy and ArcFace are trained using a dense same-identity dataset:
 
-В Spring сначала был построен новый dataset примерно на 21K изображений
-с identity-disjoint split.
-
-Первоначальная идея была максимально строгой: разные identities для
-разных subsets. Однако classification training требует другой
-постановки. При попытке использовать identity-disjoint contract
-непосредственно для CE / ArcFace classification не удалось получить
-требуемую DLS accuracy `> 0.7`.
-
-Это оказалось полезным отрицательным результатом, а не бесполезной
-веткой.
-
-### Training contract
-
-Для обучения CE и ArcFace используется Fall-style dense same-identity
-dataset:
-
-``` text
-same identities across train / validation / test
-but different images of those identities
+```text
+same identities represented across train / validation / test
+but with different images of those identities
 ```
 
-Он нужен для:
+This contract supports:
 
--   supervised classification training;
--   validation;
--   checkpoint selection;
--   выполнения DLS classification requirement.
+- supervised identity classification;
+- validation during optimization;
+- checkpoint selection;
+- controlled comparison of recognition objectives.
 
-### Evaluation contract
+### 3.2 Verification contract
 
-Spring 21K получил другую роль --- **unseen-identity verification
-benchmark**.
+The separate identity-disjoint dataset is used as a frozen **unseen-identity verification benchmark**:
 
-``` text
-Fall-style same-identity dataset
+```text
+same-identity recognition dataset
             ↓
       CE / ArcFace training
             ↓
       frozen checkpoints
             ↓
-Spring identity-disjoint dataset
+identity-disjoint evaluation dataset
             ↓
-remove identities overlapping Fall
+remove identities overlapping training population
             ↓
-frozen Spring-only benchmark
+frozen unseen-identity benchmark
             ↓
 ROC / EER / TPR@FPR
 ```
 
-Это исправляет важный недостаток Fall evaluation: population identities,
-использованные для обучения recognition model, больше не должны
-определять финальную verification quality.
+The identity-disjoint structure is not required mathematically to compute TPR@FPR. Its purpose
+is experimental: it ensures that the reported verification operating points measure
+generalization to identities unseen during recognition-model training.
 
-Identity-disjoint structure нужна не для математического вычисления
-TPR@FPR как такового, а для того, чтобы TPR@FPR характеризовал
-generalization на **unseen identities**.
+---
 
-------------------------------------------------------------------------
+## 4. Pipeline Stages and Notebooks
 
-## 4. Этапы pipeline и notebooks
+The recommended reading order follows the dependency graph of the final system.
 
-Рекомендуемый порядок просмотра репозитория совпадает с dependency graph
-конечной системы.
-
-### Notebook 01 --- YuNet face detection
+### Notebook 01 — YuNet Face Detection
 
 `notebooks/1.YuNet_BBox_Diagnostic_CelebA_Wild_v0_1__all.ipynb`
 
-YuNet проверяется как отдельный lightweight detector на полном CelebA
-Wild.
+YuNet is evaluated independently as a lightweight detector on the complete CelebA Wild dataset.
 
-Ключевые результаты:
+Key results:
 
--   detection rate: **99.8667%**;
--   все 5 GT landmarks находятся внутри YuNet bbox для **99.3985%**
-    успешных detections;
--   throughput: около **57.65 images/s**.
+- detection rate: **99.8667%**;
+- all five ground-truth landmarks lie inside the YuNet bounding box for **99.3985%**
+  of successful detections;
+- throughput: approximately **57.65 images/s**.
 
-CelebA ground-truth landmarks здесь используются только как diagnostic
-reference.
+CelebA ground-truth landmarks are used here only as a diagnostic reference.
 
-------------------------------------------------------------------------
+---
 
-### Notebook 02a --- подготовка 40K dataset для Hourglass
+### Notebook 02a — 40K Landmark Dataset Preparation
 
 `notebooks/2a.celeba_40k_colab_export_separate_train_val.ipynb`
 
-Создаёт identity-disjoint train/validation subset для обучения landmark
-detector.
+Constructs the train/validation subset used to train the landmark detector.
 
-Этот dataset относится только к Hourglass training и не является
-источником Spring 21K recognition benchmark.
+This dataset is specific to Hourglass training and is not the source of the final
+identity-disjoint recognition benchmark.
 
-Большие изображения не хранятся в Git: dataset воспроизводится из
-исходного CelebA с помощью notebook и сохранённых manifests.
+Large derived image datasets are not stored in Git. They can be regenerated from the
+original CelebA data using the notebook and preserved manifests.
 
-------------------------------------------------------------------------
+---
 
-### Notebook 02 --- Double 2-stack Hourglass
+### Notebook 02 — Double 2-stack Hourglass
 
 `notebooks/2.Double_2-stack_Hourglass_CelebA_5_Landmarks_v0_1.ipynb`
 
-Основная landmark model проекта.
+This notebook implements the project's trainable facial-landmark model:
 
-``` text
+```text
 cropped face
     ↓
 Stack 1
@@ -223,30 +191,30 @@ Stack 2
 5 landmark heatmaps
 ```
 
-Final output берётся из Stack 2.
+The final landmark prediction is taken from Stack 2.
 
 Canonical trained model:
 
--   2 stacks;
--   input: `256 × 256`;
--   heatmaps: `64 × 64`;
--   5 landmarks;
--   depth: 4;
--   channels: 256;
--   best NME: **0.0292557**.
+- 2 stacks;
+- input resolution: `256 × 256`;
+- heatmaps: `64 × 64`;
+- 5 facial landmarks;
+- Hourglass depth: 4;
+- 256 channels;
+- best Normalized Mean Error (NME): **0.0292557**.
 
-До Double Hourglass был реализован Single Hourglass как проверка идеи.
-Он остаётся историческим branch point, но не входит в final pipeline.
+A Single Hourglass model was implemented first as a proof of concept. It remains part of
+the experimental history but is not used in the final pipeline.
 
-------------------------------------------------------------------------
+---
 
-### Notebook 03 --- Three-stage front end и Spring 21K
+### Notebook 03 — Three-stage Front End and Identity-disjoint Dataset
 
 `notebooks/3.CelebA_Wild_21k_Three_Stage_Frontend_v0_1.ipynb`
 
-Объединяет:
+Integrates the complete image-normalization front end:
 
-``` text
+```text
 CelebA Wild
     ↓
 YuNet
@@ -260,85 +228,82 @@ Umeyama similarity transform
 112 × 112 RGB aligned faces
 ```
 
-И формирует Spring 21K identity-disjoint dataset:
+It also constructs the approximately 21K identity-disjoint dataset:
 
--   train: 16,000 images;
--   validation: 2,000;
--   test/query: 1,000;
--   test/distractors: 2,000.
+- train: 16,000 images;
+- validation: 2,000 images;
+- test/query: 1,000 images;
+- test/distractors: 2,000 images.
 
-40K Hourglass subset не используется как источник Spring 21K.
+The 40K Hourglass subset is not used as the source of this dataset.
 
-------------------------------------------------------------------------
+---
 
-### Notebook 04 --- Cross-Entropy
+### Notebook 04 — Cross-Entropy Recognition
 
 `notebooks/4.3_cross_entropy_loss_Fall2025_Spring2026_dual_dataset_remaster_v1__260827.ipynb`
 
 Recognition baseline:
 
--   pretrained ResNet18;
--   512-D embedding;
--   Cross-Entropy classification;
--   21 epochs;
--   batch size 128;
--   AdamW;
--   Fall-style same-identity training contract.
+- pretrained ResNet18;
+- 512-D embedding;
+- Cross-Entropy classification;
+- 21 epochs;
+- batch size 128;
+- AdamW optimizer;
+- dense same-identity training contract.
 
 Best epoch: **20**.
 
-Classification:
+Classification results:
 
--   Fall validation accuracy: **0.770504**;
--   Fall test accuracy: **0.770677**.
+- validation accuracy: **0.770504**;
+- test accuracy: **0.770677**.
 
-Таким образом, требование DLS `accuracy > 0.7` выполнено.
+---
 
-------------------------------------------------------------------------
-
-### Notebook 05 --- ArcFace
+### Notebook 05 — ArcFace Recognition
 
 `notebooks/5.4_additive_angular_margin_loss_Fall2025_dataset_remaster.ipynb`
 
 Recognition branch:
 
--   pretrained ResNet18;
--   512-D embedding;
--   ArcFace additive angular margin;
--   `m = 0.25`;
--   `s = 64`;
--   margin warm-up;
--   21 epochs.
+- pretrained ResNet18;
+- 512-D embedding;
+- ArcFace additive angular margin;
+- `m = 0.25`;
+- `s = 64`;
+- margin warm-up;
+- 21 epochs.
 
-Canonical downstream checkpoint --- исходный `best.pt` (epoch 5).
+The canonical downstream checkpoint is the original `best.pt` from epoch 5.
 
-Отдельно был проверен заранее определённый full-margin epoch-15 reference
-checkpoint как post-hoc control. Несмотря на более высокую same-identity
-classification accuracy, его downstream verification quality оказалась
-хуже canonical `best.pt`.
+A predefined full-margin epoch-15 checkpoint was subsequently evaluated as a post-hoc control.
+Although it achieved higher same-identity classification accuracy, its downstream verification
+performance was worse than that of the canonical `best.pt`.
 
-Этот control experiment не использовался для дальнейшего перебора
-checkpoints: исходный `best.pt` был сохранён как canonical model, а
-epoch 15 остался документированным branch point.
+No checkpoint sweep against the frozen verification benchmark was performed. The epoch-15
+model therefore remains a documented control rather than a replacement selected retrospectively
+on the final test protocol.
 
-Это важный практический результат: classification accuracy и ArcFace
-training loss не следует автоматически интерпретировать как оптимальный
-criterion для downstream verification checkpoint selection.
+This experiment illustrates an important practical point: classification accuracy and ArcFace
+training loss should not automatically be treated as optimal criteria for downstream
+verification checkpoint selection.
 
-------------------------------------------------------------------------
+---
 
-### Notebook 06 --- Full face-recognition pipeline
+### Notebook 06 — Full Face-recognition Pipeline
 
 `notebooks/6.DLS_FR_Task3_Full_Face_Recognition_Pipeline_v3_2__CelebA_500.ipynb`
 
-Интеграционный notebook демонстрирует полный путь:
+Integration notebook demonstrating the complete inference path:
 
-``` text
+```text
 arbitrary image
     ↓
 face detection
     ↓
-landmarks
+landmark localization
     ↓
 alignment
     ↓
@@ -347,33 +312,31 @@ CE / ArcFace embeddings
 similarity / retrieval
 ```
 
-Этот этап проверяет, что pipeline больше не зависит от CelebA
-bbox/landmark annotations при inference.
+At inference time, the pipeline no longer depends on CelebA bounding-box or landmark annotations.
 
-------------------------------------------------------------------------
+---
 
-### Notebook 07 --- Frozen CE vs ArcFace verification
+### Notebook 07 — Frozen CE vs ArcFace Verification
 
 `notebooks/7.DLS_FR_CE_vs_ArcFace_TPR_FPR_Remastered_v1.ipynb`
 
-Финальный benchmark.
+Final verification benchmark.
 
-Перед оценкой из Spring test population удаляются identities,
-пересекающиеся с Fall training population.
+Before evaluation, identities overlapping the recognition-training population are removed from
+the evaluation population.
 
-Frozen Spring-only protocol:
+Frozen unseen-identity protocol:
 
--   query: **940 images / 235 identities**;
--   distractors: **1,872 images / 1,872 identities**;
--   genuine pairs: **1,410**;
--   impostor pairs: **2,199,600**.
+- query: **940 images / 235 identities**;
+- distractors: **1,872 images / 1,872 identities**;
+- genuine pairs: **1,410**;
+- impostor pairs: **2,199,600**.
 
-Для обеих моделей используются одинаковые preprocessing, L2
-normalization, cosine similarity и pair definitions.
+Both models use identical preprocessing, L2 normalization, cosine similarity, and pair definitions.
 
-------------------------------------------------------------------------
+---
 
-## 5. Финальные verification results
+## 5. Final Verification Results
 
 ### Summary
 
@@ -382,7 +345,7 @@ normalization, cosine similarity и pair definitions.
 | ROC-AUC | **0.952670** | 0.930289 |
 | EER | **0.116379** | 0.145390 |
 
-### TPR at fixed FPR
+### TPR at Fixed FPR
 
 | FPR | Cross-Entropy | ArcFace |
 |---:|---:|---:|
@@ -394,46 +357,45 @@ normalization, cosine similarity и pair definitions.
 | 0.001 | **0.299291** | 0.192908 |
 | 0.0001 | **0.127660** | 0.071631 |
 
-В данном frozen experiment CE checkpoint превосходит canonical ArcFace
+In this frozen experiment, the Cross-Entropy checkpoint outperforms the canonical ArcFace
 checkpoint.
 
-Это **не утверждение о фундаментальном превосходстве Cross-Entropy над
-ArcFace**. Это результат конкретных checkpoints, training setup, dataset
-и frozen evaluation protocol.
+This result should **not** be interpreted as evidence that Cross-Entropy is intrinsically
+superior to ArcFace. It applies to these particular checkpoints, training conditions, datasets,
+and the specified frozen evaluation protocol.
 
-Именно поэтому результаты сохраняются вместе с protocol artifacts, а не
-интерпретируются вне контекста эксперимента.
+For that reason, numerical results are preserved together with the protocol artifacts needed
+to interpret and reproduce them.
 
-------------------------------------------------------------------------
+---
 
-## 6. Почему TPR@FPR является важной финальной метрикой
+## 6. Why TPR@FPR Is a Central Evaluation Metric
 
-Classification accuracy отвечает на вопрос: насколько хорошо classifier
-различает классы в заданной identity population.
+Classification accuracy asks how effectively a classifier separates a predefined identity
+population.
 
-Face verification задаёт другой вопрос:
+Face verification asks a different operational question:
 
-> Насколько часто система правильно принимает genuine pair при заранее
-> ограниченной допустимой частоте false accepts?
+> At a specified acceptable false-accept rate, how often does the system correctly accept a
+> genuine pair?
 
-Поэтому для verification важны operating points:
+The project therefore reports verification performance at fixed operating points, including:
 
--   `TPR @ FPR = 1e-2`;
--   `TPR @ FPR = 1e-3`;
--   `TPR @ FPR = 1e-4`.
+- `TPR @ FPR = 1e-2`;
+- `TPR @ FPR = 1e-3`;
+- `TPR @ FPR = 1e-4`.
 
-Spring 2026 сознательно заканчивается не только classification accuracy,
-а frozen verification experiment на unseen identities.
+The final experiment deliberately goes beyond closed-population classification accuracy and
+evaluates verification on identities not observed during recognition-model training.
 
-------------------------------------------------------------------------
+---
 
-## 7. Структура репозитория
+## 7. Repository Structure
 
-В public repository сохраняются notebooks, компактные dataset manifests,
-experiment artifacts и документация. Большие производные CelebA image
-datasets не дублируются в Git.
+The public repository contains notebooks, compact dataset manifests, experiment artifacts,
+and documentation. Large derived CelebA image datasets are intentionally excluded from Git.
 
-``` text
+```text
 DLS_FR_Spring_2026/
 ├── README.md
 ├── pipeline_dataflow.png
@@ -462,31 +424,30 @@ DLS_FR_Spring_2026/
     └── manifest.csv
 ```
 
-Исторические имена файлов сохранены там, где их переименование не даёт
-существенного выигрыша и может затруднить сопоставление с исходными
-experiments.
+Some historical filenames have been retained to preserve traceability between notebooks,
+experiment outputs, and checkpoints. They should not be interpreted as part of the conceptual
+architecture of the project.
 
-------------------------------------------------------------------------
+---
 
-## 8. Данные и external assets
+## 8. Data and External Assets
 
-Исходные и производные CelebA image datasets не являются частью Git
-history.
+Original and derived CelebA image datasets are not stored in the Git history.
 
-В repository остаются:
+The repository retains:
 
--   directory structure;
--   compact manifests;
--   validation reports;
--   один небольшой naming example там, где это полезно;
--   notebooks, позволяющие воспроизвести preprocessing.
+- directory structure;
+- compact manifests;
+- validation reports;
+- small representative examples where useful;
+- notebooks required to reproduce preprocessing;
+- experiment metadata and diagnostics.
 
-Canonical trained checkpoints не хранятся непосредственно в Git history.
-Они опубликованы в GitHub Release
-[`v1.0.0`](https://github.com/DrAndreyBardin/DLS_FR_Spring_2026/releases/tag/v1.0.0).
+Canonical trained checkpoints are distributed through GitHub Release `v1.0.0` rather than
+stored directly in Git history.
 
-`external_assets/manifest.csv` является authoritative registry для
-release-asset URLs, SHA-256 checksums и distribution status.
+`external_assets/manifest.csv` serves as the authoritative registry for release-asset locations,
+SHA-256 checksums, and distribution status.
 
 Canonical checkpoints:
 
@@ -494,125 +455,120 @@ Canonical checkpoints:
 2. Cross-Entropy ResNet18 — `ce_resnet18_best.pt`;
 3. ArcFace ResNet18 — `arcface_resnet18_best.pt`.
 
-Таким образом, Git repository содержит reproducibility record, а не
-копию всех локальных intermediate data.
+The repository is therefore designed as a reproducibility record rather than a duplicate store
+of all locally generated intermediate data.
 
-------------------------------------------------------------------------
+---
 
-## 9. Как смотреть проект преподавателю
+## 9. Suggested Reading Path
 
-Если цель --- быстро проверить содержательную часть проекта,
-рекомендуется следующий маршрут:
+For a rapid technical review, the following sequence follows the architecture of the system:
 
-``` text
+```text
 README
   ↓
-01 YuNet
+01 YuNet detection
   ↓
 02 Double Hourglass
   ↓
-03 Three-stage front end / 21K
+03 Three-stage front end / identity-disjoint dataset
   ↓
 04 Cross-Entropy
   ↓
 05 ArcFace
   ↓
-06 Full pipeline
+06 End-to-end inference
   ↓
-07 Final TPR@FPR benchmark
+07 Frozen TPR@FPR verification benchmark
 ```
 
-Notebook `02a` следует рассматривать как data-preparation dependency для
-Hourglass, а не как отдельный ML experiment.
+Notebook `02a` is a data-preparation dependency for Hourglass training rather than an independent
+machine-learning experiment.
 
-Особенно важны:
+The most technically significant stages are:
 
--   Notebook 02 --- собственная landmark model;
--   Notebook 03 --- интеграция нового front end;
--   Notebooks 04--05 --- recognition training;
--   Notebook 06 --- end-to-end inference;
--   Notebook 07 --- финальный identity-disjoint verification protocol.
+- **Notebook 02** — trainable facial-landmark localization;
+- **Notebook 03** — integration of detection, learned landmarks, and geometric alignment;
+- **Notebooks 04–05** — recognition-model training;
+- **Notebook 06** — end-to-end inference from arbitrary images;
+- **Notebook 07** — frozen identity-disjoint verification protocol.
 
-------------------------------------------------------------------------
+---
 
-## 10. Что можно неправильно понять
+## 10. Methodological Notes
 
-### Почему Spring 21K не используется для CE / ArcFace training?
+### Why is the identity-disjoint dataset not used directly for CE / ArcFace training?
 
-Потому что identity-disjoint dataset решает другую задачу. Попытка
-использовать его как classification training contract не дала требуемой
-DLS accuracy. Он был сохранён как более корректный unseen-identity
-verification benchmark.
+Because the two datasets serve different experimental purposes. The identity-disjoint contract
+is designed to test generalization to previously unseen identities, whereas supervised
+classification requires repeated observations of the identities whose class boundaries are
+being learned.
 
-### Почему в Spring нет Triplet Loss и ArcFace + Triplet?
+The attempted identity-disjoint classification formulation was retained as an informative
+negative result, and the dataset was repurposed as the stricter verification benchmark.
 
-Они уже успешно реализованы в Fall 2025. Spring не повторяет завершённые
-experiments.
+### Why are Triplet Loss and ArcFace + Triplet not part of the main pipeline?
 
-### Почему final ArcFace checkpoint --- epoch 5, хотя epoch 15 имеет более высокую same-identity accuracy?
+Both objectives had already been implemented and tested in earlier experiments. Repeating them
+would add limited information to the present study, whose main contribution is the explicit
+front end and the separation between recognition training and unseen-identity verification.
 
-Потому что downstream verification на frozen unseen identities оказался
-лучше для исходного `best.pt`. Epoch 15 был проверен как predefined
-post-hoc control; дальнейший перебор checkpoints по frozen benchmark не
-проводился, и canonical checkpoint не менялся.
+### Why is the canonical ArcFace checkpoint from epoch 5 rather than the epoch-15 model with higher classification accuracy?
 
-### Почему CE оказался лучше ArcFace?
+Because the predefined epoch-15 control produced worse downstream verification performance.
+It was evaluated as a post-hoc control only; the final benchmark was not used for an iterative
+checkpoint search.
 
-Таков результат именно данного frozen experiment. Он не превращается в
-общий вывод о loss functions.
+### Why does Cross-Entropy outperform ArcFace in the reported benchmark?
 
-### Почему datasets не лежат целиком в Git?
+That is the empirical result for the specific frozen models and protocol reported here. It is
+not a general conclusion about the two loss functions.
 
-Потому что они воспроизводимы из CelebA с помощью notebooks и manifests,
-а Git repository не должен превращаться в хранилище гигабайт производных
-изображений.
+### Why are the complete datasets not stored in Git?
 
-------------------------------------------------------------------------
+The derived datasets can be regenerated from CelebA using the notebooks and manifests. Keeping
+gigabytes of reproducible image derivatives in Git would reduce repository usability without
+improving experimental traceability.
 
-## 11. Итог
+---
 
-Spring 2026 оказался не просто расширением Fall 2025 ещё одним loss
-function.
+## 11. Main Outcome
 
-Основной результат проекта --- переход от recognition experiment к более
-полной инженерной системе:
+The main result of the project is the transition from an isolated recognition experiment to a
+modular end-to-end system:
 
-``` text
-wild image
+```text
+unconstrained image
    ↓
 explicit face front end
    ↓
-aligned canonical face
+canonical aligned face
    ↓
 recognition embedding
    ↓
 verification on unseen identities
 ```
 
-Наиболее важным уроком стала необходимость разделять три разных вопроса:
+The most important methodological conclusion is that three questions should remain separate:
 
-1.  способен ли classifier обучиться различать training identity
-    population;
-2.  способен ли pipeline получить корректный embedding из исходного wild
-    image;
-3.  насколько хорошо этот embedding работает при verification людей,
-    которых recognition model не видела при обучении.
+1. whether a classifier can distinguish identities represented during supervised training;
+2. whether the image-processing front end can produce a stable canonical face from an
+   unconstrained image;
+3. whether the resulting representation supports verification of people unseen during
+   recognition-model training.
 
-Именно это разделение определило архитектуру Spring 2026: отдельный
-Hourglass training dataset, same-identity recognition training contract
-и identity-disjoint final verification benchmark.
+This distinction motivated the final architecture: a dedicated landmark-training dataset,
+a dense recognition-training contract, and a separate identity-disjoint verification benchmark.
 
-------------------------------------------------------------------------
+---
 
-## 12. Status
+## 12. Project Status
 
-**Spring 2026 v1.0 — final publication candidate.**
+**Version 1.0 — publication-ready research repository.**
 
-Текущий repository содержит final notebooks, selected experiment
-artifacts и reproducibility metadata. Canonical model checkpoints уже
-опубликованы в GitHub Release `v1.0.0`.
+The repository contains the final notebooks, selected experiment artifacts, reproducibility
+metadata, and released canonical model checkpoints.
 
-После финального repository audit текущая revision предназначена для
-перевода в Public без дополнительных experimental changes. Дальнейшие
-изменения, если они понадобятся, рассматриваются как последующие
-revisions, а не как условие завершения первой публичной версии.
+The current revision is intended as a stable public version. Future experiments or architectural
+changes should be treated as subsequent revisions rather than prerequisites for reproducing
+the results reported here.
